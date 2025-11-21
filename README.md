@@ -1,6 +1,6 @@
 # **A Multimodal Framework for Oil Price, Supply & Demand Forecasting**
 
-This project explores the use of **multimodal machine learning** to forecast key oil market variables — specifically **oil prices**, **global supply**, and **global demand**.  
+This project explores the explanation and forecast of key oil market variables — specifically **oil prices**, **global supply**, and **global demand**.  
 Our approach integrates two complementary data sources:
 
 - **Textual data**, derived from *OPEC speeches*, processed using modern NLP techniques  
