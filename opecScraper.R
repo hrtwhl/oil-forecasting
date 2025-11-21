@@ -4,8 +4,7 @@ library(stringr)
 library(purrr)
 library(lubridate)
 library(writexl)
-# library(httr) # No longer needed as we use the live browser
-# NOTE: Ensure you have installed 'chromote' -> install.packages("chromote")
+library(chromote)
 
 # ------------------------------------------------------------------------------
 # Configuration
@@ -23,9 +22,9 @@ base_domain <- "https://www.opec.org"
 # Helper Functions
 # ------------------------------------------------------------------------------
 
-#' Extract speech links from a main year page
+# Extract speech links from a main year page
 get_speech_links <- function(page_url) {
-  message(paste("Scanning list page (Live Browser):", page_url))
+  message(paste("Scanning list page:", page_url))
   
   tryCatch({
     sess <- read_html_live(page_url)
@@ -55,7 +54,7 @@ get_speech_links <- function(page_url) {
   })
 }
 
-#' Scrape the content of a single speech
+# Scrape the content of a single speech
 get_speech_content <- function(speech_url) {
   
   tryCatch({
@@ -102,7 +101,7 @@ get_speech_content <- function(speech_url) {
 # 1. Collect all individual speech URLs
 all_speech_urls <- map(target_urls, get_speech_links) %>% unlist() %>% unique()
 
-message(paste("Found", length(all_speech_urls), "speeches in total. Starting scrape..."))
+message(paste("Found", length(all_speech_urls), "speeches in total."))
 
 # 2. Scrape content for each URL
 final_data <- map_dfr(all_speech_urls, function(url) {
@@ -119,7 +118,5 @@ final_data <- final_data %>%
 output_filename <- "opec_speeches_2024_2025.xlsx"
 write_xlsx(final_data, output_filename)
 
-message(paste("Done! Scraped", nrow(final_data), "speeches."))
-message(paste("File saved as:", output_filename))
 
 
