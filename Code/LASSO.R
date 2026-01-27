@@ -182,27 +182,3 @@ eval_one_step_ahead(test_idx, pred_hybrid_oos, "Hybrid (OOS)", df_final)
 
 
 
-# ------------------------------------------------------------------------------
-# FIX: BEREINIGUNG DES DATENSATZ-ENDES
-# ------------------------------------------------------------------------------
-
-# Wir schauen uns das Ende an (zur Diagnose)
-print("Letzte 5 Zeilen VOR Bereinigung:")
-print(tail(df_final %>% select(date, Price_WTI, Return_WTI_Daily)))
-
-# BEREINIGUNG:
-# 1. Wir entfernen Tage, an denen der Preis 0 oder NA ist.
-# 2. Wir entfernen den allerletzten Tag, wenn er unvollständig wirkt (oft hilfreich bei Live-Daten).
-df_final <- df_final %>%
-  filter(!is.na(Price_WTI)) %>%
-  filter(Price_WTI > 0) %>%        # Entfernt 0-Preise (Fehler im Download)
-  filter(is.finite(Return_WTI_Daily)) # Entfernt unendliche Returns (durch Division durch 0)
-
-# Optional: Schneide sicherheitshalber den allerletzten Datenpunkt ab, 
-# da 'heute' oft noch volatil ist oder Daten fehlen.
-# df_final <- head(df_final, n = nrow(df_final) - 1)
-
-print("Letzte 5 Zeilen NACH Bereinigung:")
-print(tail(df_final %>% select(date, Price_WTI, Return_WTI_Daily)))
-
-# Ab hier weiter mit Schritt 3 (Text Mining)...
