@@ -219,3 +219,6 @@ print(paste("Total Rows:", nrow(model_df)))
 
 # Save
 write.csv(model_df, "Data/market_data.csv", row.names = FALSE)
+
+
+print(head(model_df$date, 15))

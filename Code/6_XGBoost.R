@@ -2,7 +2,7 @@
 # Load Setup
 # ------------------------------------------------------------------------------
 
-source("1_Setup.R")
+source("Code/1_Setup.R")
 
 # ------------------------------------------------------------------------------
 # 9. XGBOOST (Gradient Boosting)
@@ -207,6 +207,41 @@ print(xgb.plot.importance(importance_matrix, top_n = 15, measure = "Gain"))
 
 # Falls du die reine Tabelle willst:
 print(head(importance_matrix, 15))
+
+
+
+
+
+# ------------------------------------------------------------------------------
+# 11. FINAL COMPARISON TABLE (Optional but helpful)
+# ------------------------------------------------------------------------------
+print("--- FINAL MAE COMPARISON (OOS) ---")
+
+# Helper to calc MAE quickly
+calc_mae <- function(pred) mean(abs(df_final$Return_WTI_Daily[test_idx] - pred))
+
+maes <- data.frame(
+  Model = c("Naive Benchmark", 
+            "Lasso Text", "Lasso Hybrid",
+            "ElasticNet Text", "ElasticNet Hybrid",
+            "RF Text", "RF Hybrid",
+            "XGB Text", "XGB Hybrid"),
+  
+  MAE_OOS = c(calc_mae(pred_naive_oos),
+              # Falls Variablen aus vorherigen Blöcken existieren, hier eintragen:
+              if(exists("pred_text_oos")) calc_mae(pred_text_oos) else NA,
+              if(exists("pred_hybrid_oos")) calc_mae(pred_hybrid_oos) else NA,
+              if(exists("enet_text_oos")) calc_mae(enet_text_oos$pred) else NA,
+              if(exists("enet_hybrid_oos")) calc_mae(enet_hybrid_oos$pred) else NA,
+              if(exists("pred_text_oos")) calc_mae(pred_text_oos) else NA, # RF Variable names checken
+              if(exists("pred_hybrid_oos")) calc_mae(pred_hybrid_oos) else NA,
+              if(exists("pred_xgb_text_oos")) calc_mae(pred_xgb_text_oos) else NA,
+              if(exists("pred_xgb_hyb_oos")) calc_mae(pred_xgb_hyb_oos) else NA
+  )
+)
+
+print(maes %>% arrange(MAE_OOS))
+
 
 
 
