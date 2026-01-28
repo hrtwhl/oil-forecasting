@@ -7,6 +7,8 @@ if (!require("dplyr")) install.packages("dplyr")
 if (!require("ggplot2")) install.packages("ggplot2")
 if (!require("lubridate")) install.packages("lubridate")
 if (!require("Matrix")) install.packages("Matrix")
+# NEU: Für Side-by-Side Charts
+if (!require("gridExtra")) install.packages("gridExtra")
 
 library(tm)
 library(gamlr)
@@ -14,6 +16,7 @@ library(dplyr)
 library(ggplot2)
 library(lubridate)
 library(Matrix)
+library(gridExtra)
 
 set.seed(123)
 
@@ -119,51 +122,79 @@ train_idx   <- 1:split_index
 test_idx    <- (split_index + 1):nrow(df_final)
 
 # ------------------------------------------------------------------------------
-# 5. KORRIGIERTE PLOT-FUNKTION 
+# 5. DUAL-CHART EVALUATION (LINKS: Returns/Professor, RECHTS: Price/Trading)
 # ------------------------------------------------------------------------------
 
 eval_one_step_ahead <- function(indices, predicted_returns, model_name, full_df) {
   
+  # --- DATEN VORBEREITEN ---
   subset_df <- full_df[indices, ]
   actual_prices <- subset_df$Price_WTI
+  actual_returns <- subset_df$Return_WTI_Daily
   
-  # FIX: Korrekte Berechnung des "Vortages-Preises"
+  # One-Step-Ahead Preis Berechnung (Anker setzen)
   start_idx <- indices[1]
-  
   if (start_idx == 1) {
-    # Fall: In-Sample Start (Tag 1). 
-    # Wir haben keinen Tag 0. Wir "schummeln" leicht und nehmen für Tag 1 
-    # den echten Preis von Tag 1 als Basis (Fehler = 0 am Start),
-    # da wir ohne Historie keine One-Step-Ahead Prognose für den allerersten Punkt machen können.
+    # In-Sample Start: Tag 1 Preis als Basis
     prev_prices <- c(actual_prices[1], actual_prices[1:(length(actual_prices)-1)])
   } else {
-    # Fall: Out-of-Sample (Tag N). Wir nehmen den Preis von Tag N-1.
+    # Out-of-Sample Start: Tag N-1 Preis als Basis
     prev_prices <- c(full_df$Price_WTI[start_idx - 1], actual_prices[1:(length(actual_prices)-1)])
   }
   
-  # Berechnung
   fitted_prices <- prev_prices * exp(predicted_returns)
   
-  # MAE
-  mae <- mean(abs(subset_df$Return_WTI_Daily - predicted_returns))
+  # MAE auf Returns berechnen (Wissenschaftlich korrekt)
+  mae <- mean(abs(actual_returns - predicted_returns))
   
-  # Plotting
+  # Plotting DataFrame
   plot_df <- data.frame(
     Date = subset_df$date,
-    Actual = actual_prices,
-    Fitted = fitted_prices
+    Actual_Price = actual_prices,
+    Fitted_Price = fitted_prices,
+    Actual_Return = actual_returns,
+    Predicted_Return = predicted_returns
   )
   
-  p <- ggplot(plot_df, aes(x = Date)) +
-    geom_line(aes(y = Actual, color = "Actual Price"), size = 0.6) +
-    geom_line(aes(y = Fitted, color = "Fitted (One-Step-Ahead)"), size = 0.4, alpha = 0.8) +
-    scale_color_manual(values = c("Actual Price" = "black", "Fitted (One-Step-Ahead)" = "red")) +
-    labs(title = paste("One-Step-Ahead Forecast:", model_name),
-         subtitle = paste("Based on previous day's actual price + predicted return.\nMAE (Returns):", round(mae, 5)),
-         y = "WTI Price (USD)", x = "Date") +
+  # --- CHART 1 (LINKS): RAW RETURNS (Professor Style) ---
+  # Zeigt das "Rauschen" und wie schwer es ist, die Richtung vorherzusagen.
+  p1 <- ggplot(plot_df, aes(x = Date)) +
+    geom_line(aes(y = Actual_Return, color = "Actual Return"), alpha = 1, size = 0.3) +
+    geom_line(aes(y = Predicted_Return, color = "Predicted Return"), alpha = 0.8, size = 0.4) +
+    scale_color_manual(values = c("Actual Return" = "#00589C", "Predicted Return" = "#50E3C2")) +
+    labs(title = paste("Raw Signal (Returns):", model_name),
+         subtitle = paste("MAE (Error):", round(mae, 5), "\n(Prediction vs. Daily Volatility)"),
+         y = "Log Return", x = NULL) +
     theme_minimal() +
-    theme(legend.position = "bottom")
+    theme(legend.position = "bottom",
+          plot.title = element_text(size = 10, face = "bold"),
+          axis.title = element_text(size = 8),
+          legend.text = element_text(size = 7),
+          legend.title = element_blank())
   
-  print(p)
+  # --- CHART 2 (RECHTS): PRICE TRACKER (Dein Style) ---
+  # Zeigt die praktische Anwendung (One-Step-Ahead).
+  p2 <- ggplot(plot_df, aes(x = Date)) +
+    geom_line(aes(y = Actual_Price, color = "Actual Price"), size = 0.6) +
+    geom_line(aes(y = Fitted_Price, color = "One-Step-Ahead Forecast"), size = 0.4, alpha = 0.8) +
+    scale_color_manual(values = c("Actual Price" = "#00589C", "One-Step-Ahead Forecast" = "#50E3C2")) +
+    labs(title = paste("Price Tracker:", model_name),
+         subtitle = "Re-anchored daily to previous price.\nShows ability to track trend.",
+         y = "WTI Price (USD)", x = NULL) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          plot.title = element_text(size = 10, face = "bold"),
+          axis.title = element_text(size = 8),
+          legend.text = element_text(size = 7),
+          legend.title = element_blank())
+  
+  # --- NEBENEINANDER PLOTTEN ---
+  grid.arrange(p1, p2, ncol = 2)
 }
+
+
+
+
+
+
 
